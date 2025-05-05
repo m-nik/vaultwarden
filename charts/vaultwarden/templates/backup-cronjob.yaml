@@ -1,0 +1,38 @@
+{{- if .Values.backup.enabled }}
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "vaultwarden.fullname" . }}-backup
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: "{{ .Values.backup.schedule }}"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: s3-backup
+              image: alpine:3.18
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  apk add --no-cache s3cmd && \
+                  echo "[default]
+                  access_key={{ .Values.backup.s3.accessKey }}
+                  secret_key={{ .Values.backup.s3.secretKey }}
+                  host_base={{ .Values.backup.s3.endpoint | default "s3.amazonaws.com" }}
+                  host_bucket={{ .Values.backup.s3.endpoint | default "s3.amazonaws.com" }}
+                  bucket_location={{ .Values.backup.s3.region }}
+                  signature_v2 = False" > /root/.s3cfg && \
+                  s3cmd put {{ .Values.backup.sourcePath }} s3://{{ .Values.backup.s3.bucket }}/{{ .Values.backup.s3.key }}
+              volumeMounts:
+                - name: {{ .Values.backup.volume.name }}
+                  mountPath: {{ .Values.backup.volume.mountPath }}
+                  readOnly: {{ .Values.backup.volume.readOnly | default true }}
+          restartPolicy: OnFailure
+          volumes:
+            - name: {{ .Values.backup.volume.name }}
+              persistentVolumeClaim:
+                claimName: {{ .Values.backup.volume.claimName }}
+{{- end }}
