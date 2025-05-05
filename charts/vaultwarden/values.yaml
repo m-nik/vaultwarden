@@ -772,3 +772,19 @@ ingress:
   ##   - Add support for using cert-manager.
   ##   - Support for multiple TLS hostnames.
   ##
+backup:
+  enabled: false
+  schedule: "0 2 * * *"
+  sourcePath: "/data/db.sqlite3"
+  s3:
+    bucket: "my-bucket"
+    region: "eu-central-1"
+    directory: "backups/"
+    accessKey: "REPLACE_ME"
+    secretKey: "REPLACE_ME"
+    # endpoint: "s3.example.com"
+  volume:
+    name: data-volume
+    mountPath: /data
+    claimName: data-pvc
+    readOnly: true
