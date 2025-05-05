@@ -11,13 +11,13 @@ spec:
       template:
         spec:
           containers:
-            - name: s3-backup
+            - name: sqlite-s3-backup
               image: alpine:3.18
               command:
                 - /bin/sh
                 - -c
                 - |
-                  apk add --no-cache s3cmd && \
+                  apk add --no-cache sqlite s3cmd && \
                   echo "[default]
                   access_key={{ .Values.backup.s3.accessKey }}
                   secret_key={{ .Values.backup.s3.secretKey }}
@@ -25,7 +25,10 @@ spec:
                   host_bucket={{ .Values.backup.s3.endpoint | default "s3.amazonaws.com" }}
                   bucket_location={{ .Values.backup.s3.region }}
                   signature_v2 = False" > /root/.s3cfg && \
-                  s3cmd put {{ .Values.backup.sourcePath }} s3://{{ .Values.backup.s3.bucket }}/{{ .Values.backup.s3.key }}
+                  TS=$(date +%F) && \
+                  sqlite3 {{ .Values.backup.dbPath }} .dump > /tmp/backup-$TS.sqlite && \
+                  s3cmd put /tmp/backup-$TS.sqlite s3://{{ .Values.backup.s3.bucket }}/{{ .Values.backup.s3.directory }}/
+
               volumeMounts:
                 - name: {{ .Values.backup.volume.name }}
                   mountPath: {{ .Values.backup.volume.mountPath }}
